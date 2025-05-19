@@ -240,13 +240,13 @@
             }
             
             draw() {
-                // Draw the square
+                // Draw the Ellipse
                 noStroke();
                 const alpha = map(this.age, 0, this.lifetime, 255, 0);
                 fill(red(this.colour), green(this.colour), blue(this.colour), alpha);
                 
-                // Draw square instead of pentagon 
-                this.drawSquare(this.x, this.y, this.radius);
+                // Draw ellipse
+                this.drawEllipse(this.x, this.y, this.radius);
                 
                 // Update position
                 this.x += this.velX;
@@ -265,8 +265,8 @@
                 // Update age
                 this.age++;
             }
-            // Method to draw a square changed to pentagon
-            drawSquare(x, y, radius) {
+            // Method to draw an Ellipse
+            drawEllipse(x, y, radius) {
                 beginShape();
                 // Four corners of a square
                 vertex(x - radius, y - radius); // Top-left
@@ -455,19 +455,19 @@
             for (let i = 0; i < numCircles; i++) {
                 const size = random(7, 16); // Larger initial size
                 
-                 // Randomly choose between grey and green-blue colors
+                 // Randomly choose between pink and blue colors
                  let circleColor;
 
-                if (random() < 0.4) { // 40% chance of grey
-                    // Grey colors (all RGB channels similar values)
-                    const greyValue = random(80, 200);
-                    circleColor = color(greyValue, greyValue, greyValue);
-                } else { // 60% chance of green-blue
-                    // Use a variety of green/blue colors
+                if (random() < 0.4) { // 40% chance of pink
+                    // Pink colors (all RGB channels similar values)
+                    const pinkValue = random(80, 200);
+                    circleColor = color(pinkValue, pinkValue, pinkValue);
+                } else { // 60% chance of blue
+                    // Use a variety of blue colors
                     circleColor = color(
                         random(0, 50),  // low red
-                        random(100, 200), // high green
-                        random(50, 150)  // medium blue
+                        random(50, 150), // high green
+                        random(100, 200)  // medium blue
                     );
                 }
                 
