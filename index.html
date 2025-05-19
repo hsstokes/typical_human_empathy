@@ -462,15 +462,18 @@
                  let circleColor;
 
                 if (random() < 0.4) { // 40% chance of pink
-                    // Pink colors (all RGB channels similar values)
-                    const pinkValue = random(80, 200);
-                    circleColor = color(pinkValue, pinkValue, pinkValue);
-                } else { // 60% chance of blue
-                    // Use a variety of blue colors
+                    // Pink colors (high red, medium green, high blue)
                     circleColor = color(
-                        random(0, 50),  // low red
-                        random(50, 150), // high green
-                        random(100, 200)  // medium blue
+                        random(200, 255),   // high red
+                        random(100, 180),   // medium green
+                        random(180, 255)    // high blue
+                    );               
+                } else { // 60% chance of blue
+                    // Blue colors (low red, low-medium green, high blue)
+                    circleColor = color(
+                        random(20, 90),  // low red
+                        random(100, 170), // medium green
+                        random(200, 255)  // high blue
                     );
                 }
                 
