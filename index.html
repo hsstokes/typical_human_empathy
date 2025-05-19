@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tactile Thresholds</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            background-color: #f5f5f7; /* Light, soft background instead of black */
+            font-family: 'Roboto Mono', monospace;
+        }
+        
+        /* Main container for better background handling */
+        #p5-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            cursor: pointer; /* Show pointer cursor to indicate interactivity */
+        }
+        
+        canvas {
+            display: block;
+            /* Added position to ensure canvas doesn't create scrollbars */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        #startOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(245, 245, 247, 0.9); /* Lighter overlay */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        #startTitle {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        
+        #startDescription {
+            max-width: 500px;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #555;
+            padding: 0 20px;
+        }
+        
+        #startButton {
+            padding: 12px 30px;
+            font-size: 18px;
+            background-color: transparent;
+            color: #0066cc;
+            border: 1px solid #0066cc;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: 'Roboto Mono', monospace;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+        
+        #startButton:hover {
+            background-color: rgba(0, 102, 204, 0.1);
+        }
+        
+        #startButton:active {
+            transform: scale(0.98);
+        }
+        
+        #soundButton {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 1px solid #0066cc;
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            color: #0066cc;
+            user-select: none;
+            -webkit-user-select: none;
+            z-index: 100;
+            cursor: pointer;
+        }
+        
+        #soundButton svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        #soundButton:active {
+            background-color: rgba(0, 102, 204, 0.1);
+            transform: translateX(-50%) scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div id="p5-container"></div>
+    <div id="startOverlay">
+        <div id="startTitle">Tactile Thresholds</div>
+        <div id="startDescription">
+            Explore the intersection of physical and digital through touch. 
+            Each interaction generates unique sound compositions that map the 
+            emotional relationships between human and AI.
+        </div>
+        <button id="startButton">BEGIN INTERACTION</button>
+    </div>
+    <div id="soundButton">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.09 5.12c-.17-.32-.42-.55-.71-.55-.29 0-.54.23-.71.55L4.13 11.79c-.17.33-.13.74.1 1.02.23.28.59.44.97.44h8.6c.38 0 .74-.16.97-.44.23-.28.27-.69.1-1.02L11.33 5.12c-.17-.32-.42-.55-.71-.55-.29 0-.54.23-.71.55z"></path>
+            <path d="M9 13v6c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-6"></path>
+        </svg>
+    </div>
+
+    <script>
+        // Game variables
+        let walkRight = [];
+        let walkLeft = [];
+        let gridImg;
+        let bulletSound;
+        let bullets = [];
+        let shoot = 0;
+        let gameStarted = false;
+        let soundsLoaded = false;
+        let soundInitialized = false;
+        
+        // Canvas dimensions
+        let W_WIDTH = 1920;
+        let W_HEIGHT = 1920;
+        
+        // Player class
+        class Player {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.vel = 4;
+                this.walkCount = 0;
+                this.standing = true;
+                this.last_direction = "right";
+                this.hitbox = {
+                    x: this.x + 75,
+                    y: this.y + 75,
+                    width: this.width - 150,
+                    height: this.height - 150
+                };
+            }
+            
+            draw() {
+                let frames;
+                if (this.last_direction === "right") {
+                    frames = walkRight;
+                } else {
+                    frames = walkLeft;
+                }
+                
+                if (this.walkCount >= frames.length) {
+                    this.walkCount = 0;
+                }
+                
+                // Use raw canvas API for blend mode but with higher opacity
+                let ctx = drawingContext;
+                ctx.save();
+                ctx.globalCompositeOperation = 'darken';
+                ctx.globalAlpha = 1.0; // Less transparent (0.9 -> 1.0)
+                
+                // Draw the frame at exact dimensions
+                if (frames[this.walkCount] && frames[this.walkCount].canvas) {
+                    ctx.drawImage(frames[this.walkCount].canvas, this.x, this.y, this.width, this.height);
+                }
+                
+                // Restore canvas state
+                ctx.restore();
+                
+                this.walkCount += 1;
+                if (this.walkCount >= frames.length) {
+                    this.walkCount = 0;
+                }
+                
+                // Update hitbox with current position
+                this.hitbox = {
+                    x: this.x + 75,
+                    y: this.y + 75,
+                    width: this.width - 150,
+                    height: this.height - 150
+                };
+            }
+        }
+        
+        // Circle effect (beautiful random circles)
+        class Projectile {
+            constructor(x, y, radius, colour, direction) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.colour = colour;
+                this.direction = direction;
+                
+                // Random velocity components
+                const angle = random(0, TWO_PI);
+                const speed = random(2, 8);
+                this.velX = speed * cos(angle);
+                this.velY = speed * sin(angle);
+                
+                // Random lifetime
+                this.lifetime = random(30, 120);
+                this.age = 0;
+                this.growing = true;
+                this.maxRadius = radius * random(3, 8); // Larger circles
+            }
+            
+            draw() {
+                // Draw the square
+                noStroke();
+                const alpha = map(this.age, 0, this.lifetime, 255, 0);
+                fill(red(this.colour), green(this.colour), blue(this.colour), alpha);
+                
+                // Draw square instead of pentagon 
+                this.drawSquare(this.x, this.y, this.radius);
+                
+                // Update position
+                this.x += this.velX;
+                this.y += this.velY;
+                
+                // Update size - faster growth
+                if (this.growing) {
+                    this.radius += 0.4; // Faster growth
+                    if (this.radius >= this.maxRadius) {
+                        this.growing = false;
+                    }
+                } else {
+                    this.radius = max(0, this.radius - 0.05);
+                }
+                
+                // Update age
+                this.age++;
+            }
+            // Method to draw a square changed to pentagon
+            drawSquare(x, y, radius) {
+                beginShape();
+                // Four corners of a square
+                vertex(x - radius, y - radius); // Top-left
+                vertex(x + radius, y - radius); // Top-right
+                vertex(x + radius, y + radius); // Bottom-right
+                vertex(x - radius, y + radius); // Bottom-left
+                endShape(CLOSE); // Close the shape
+            }
+            
+            isFinished() {
+                return this.age >= this.lifetime;
+            }
+        }
+        
+        // Preload assets
+        function preload() {
+            // Load background
+            gridImg = loadImage('images/grid_img.jpeg');
+            
+            // Load character images
+            for (let i = 1; i <= 6; i++) {
+                walkRight.push(loadImage(`soldier/${i}.png`));
+                walkLeft.push(loadImage(`soldier/L${i}.png`));
+            }
+            
+            // Sound loading
+            soundFormats('mp3');
+            bulletSound = loadSound('sounds/Bulletsound.mp3');
+        }
+        
+        function setup() {
+            // Create canvas matching game dimensions and place it in the container
+            let canvas;
+            
+            // Calculate the canvas dimensions while maintaining aspect ratio
+            let canvasWidth, canvasHeight;
+            
+            if (windowWidth / windowHeight > W_WIDTH / W_HEIGHT) {
+                // Window is wider than the target aspect ratio
+                canvasHeight = windowHeight;
+                canvasWidth = canvasHeight * (W_WIDTH / W_HEIGHT);
+            } else {
+                // Window is taller than the target aspect ratio
+                canvasWidth = windowWidth;
+                canvasHeight = canvasWidth * (W_HEIGHT / W_WIDTH);
+            }
+            
+            canvas = createCanvas(canvasWidth, canvasHeight);
+            canvas.parent('p5-container');
+            
+            // Make canvas clickable to trigger circles
+            canvas.mousePressed(createCircles);
+            canvas.touchStarted(function() {
+                createCircles();
+                return false;
+            });
+            
+            // Create character with LARGER size (250x250)
+            soldier = new Player(width/2 - 190, height/2 - 190, 380, 380);
+            
+            // Set up start button
+            document.getElementById('startButton').addEventListener('click', startGame);
+            document.getElementById('startButton').addEventListener('touchstart', function(e) {
+                startGame();
+                e.preventDefault();
+            });
+            
+            // Sound button for mobiles
+            document.getElementById('soundButton').addEventListener('click', createCircles);
+            document.getElementById('soundButton').addEventListener('touchstart', function(e) {
+                createCircles();
+                e.preventDefault();
+            });
+            
+            // Add interaction to container div as well
+            document.getElementById('p5-container').addEventListener('click', createCircles);
+            document.getElementById('p5-container').addEventListener('touchstart', function(e) {
+                // Only trigger if game has started and not from control buttons
+                if (gameStarted && e.target.id !== 'soundButton') {
+                    createCircles();
+                    e.preventDefault();
+                }
+            });
+            
+            frameRate(12); // Smoother framerate
+            
+            // Create AudioContext
+            window.AudioContext = window.AudioContext || window.webkitAudioContext;
+            try {
+                window.audioContext = new AudioContext();
+            } catch(e) {
+                console.error("Could not create AudioContext:", e);
+            }
+        }
+        
+        function hideControls() {
+            document.getElementById('soundButton').style.display = 'none';
+        }
+        
+        function showControls() {
+            document.getElementById('soundButton').style.display = 'flex';
+        }
+        
+        function startGame() {
+            // Remove overlay
+            document.getElementById('startOverlay').style.display = 'none';
+            
+            // Resume AudioContext if suspended
+            if (window.audioContext && window.audioContext.state === 'suspended') {
+                window.audioContext.resume();
+            }
+            
+            // Try to unlock audio on iOS
+            unlockAudio();
+            
+            // Initialize sounds
+            initSounds();
+            
+            // Show mobile controls
+            showControls();
+            
+            // Start the game
+            gameStarted = true;
+        }
+        
+        // Function to unlock audio on iOS
+        function unlockAudio() {
+            // Play silent audio to unlock
+            const audioElement = document.createElement('audio');
+            audioElement.setAttribute('src', 'data:audio/mp3;base64,SUQzAwAAAAAAIlRJVDIAAAABAAAASVRTUwAAAAEAAABUQ09OAAAABAAAAE11c2ljLw==');
+            audioElement.setAttribute('playsinline', 'true');
+            audioElement.play();
+            
+            // Create and play a silent oscillator
+            if (window.audioContext) {
+                const oscillator = window.audioContext.createOscillator();
+                const gainNode = window.audioContext.createGain();
+                gainNode.gain.value = 0;
+                oscillator.connect(gainNode);
+                gainNode.connect(window.audioContext.destination);
+                oscillator.start(0);
+                oscillator.stop(0.001);
+            }
+        }
+        
+        function initSounds() {
+            try {
+                // Force audio context to start
+                if (window.audioContext && window.audioContext.state === 'suspended') {
+                    window.audioContext.resume().then(() => {
+                        console.log("AudioContext resumed by initSounds()");
+                    });
+                }
+                
+                // Add a direct HTML5 audio for fallback
+                if (!window.backupAudio) {
+                    window.backupAudio = new Audio();
+                    window.backupAudio.src = 'sounds/Bulletsound.mp3';
+                    window.backupAudio.load();
+                }
+                
+                // Try playing with p5.sound
+                if (bulletSound && typeof bulletSound.play === 'function') {
+                    bulletSound.play();
+                    bulletSound.stop();
+                }
+                soundsLoaded = true;
+                soundInitialized = true;
+            } catch(e) {
+                console.error("Sound initialization failed:", e);
+            }
+        }
+        
+        function createCircles() {
+            // Only proceed if game is started
+            if (!gameStarted) return;
+            
+            // Make multiple attempts to play sound
+            playSound();
+            
+            // Create multiple beautiful random circles
+            const numCircles = random(5, 12); // More circles
+            const centerX = soldier.x + soldier.width / 2;
+            const centerY = soldier.y + soldier.height / 2;
+            
+            for (let i = 0; i < numCircles; i++) {
+                const size = random(7, 16); // Larger initial size
+                
+                 // Randomly choose between grey and green-blue colors
+                 let circleColor;
+
+                if (random() < 0.4) { // 40% chance of grey
+                    // Grey colors (all RGB channels similar values)
+                    const greyValue = random(80, 200);
+                    circleColor = color(greyValue, greyValue, greyValue);
+                } else { // 60% chance of green-blue
+                    // Use a variety of green/blue colors
+                    circleColor = color(
+                        random(0, 50),  // low red
+                        random(100, 200), // high green
+                        random(50, 150)  // medium blue
+                    );
+                }
+                
+                bullets.push(new Projectile(
+                    centerX + random(-15, 15),
+                    centerY + random(-15, 15),
+                    size, 
+                    circleColor,
+                    1
+                ));
+            }
+            
+            // Set cooldown
+            shoot = 1;
+            
+            // Alternate the character direction for visual interest
+            soldier.last_direction = soldier.last_direction === "right" ? "left" : "right";
+        }
+        
+        function playSound() {
+            // Multiple approaches to try to play sound
+            try {
+                // Approach 1: Use p5.sound
+                if (soundsLoaded) {
+                    if (window.audioContext && window.audioContext.state === 'suspended') {
+                        window.audioContext.resume();
+                    }
+                    
+                    if (bulletSound && typeof bulletSound.play === 'function') {
+                        bulletSound.play();
+                    }
+                }
+                
+                // Approach 2: Use direct HTML5 Audio API as fallback
+                if (window.backupAudio) {
+                    window.backupAudio.currentTime = 0;
+                    window.backupAudio.play().catch(e => console.log("HTML5 Audio fallback failed:", e));
+                }
+                
+                // Approach 3: Create a new Audio element each time (works on some mobile browsers)
+                const audio = new Audio('sounds/Bulletsound.mp3');
+                audio.play().catch(e => console.log("New Audio element failed:", e));
+                
+            } catch (e) {
+                console.error("All sound play attempts failed:", e);
+            }
+        }
+        
+        // KEYBOARD CONTROL HANDLERS - Simplified to just spacebar
+        function keyPressed() {
+            if (keyCode === 32) { // Space key
+                if (gameStarted && shoot === 0) {
+                    createCircles();
+                    if (document.getElementById('soundButton')) {
+                        document.getElementById('soundButton').classList.add('active');
+                    }
+                }
+                return false;
+            }
+        }
+        
+        function keyReleased() {
+            if (keyCode === 32) { // Space key
+                if (document.getElementById('soundButton')) {
+                    document.getElementById('soundButton').classList.remove('active');
+                }
+                return false;
+            }
+        }
+        
+        function draw() {
+            if (!gameStarted) return;
+            
+            // Clear the canvas each frame
+            clear();
+            
+            // Draw background - use object-fit:cover style approach
+            let bgWidth, bgHeight;
+            const bgRatio = gridImg.width / gridImg.height;
+            const canvasRatio = width / height;
+            
+            if (bgRatio > canvasRatio) {
+                // Background is wider than canvas
+                bgHeight = height;
+                bgWidth = height * bgRatio;
+            } else {
+                // Background is taller than canvas
+                bgWidth = width;
+                bgHeight = width / bgRatio;
+            }
+            
+            // Center the background
+            const bgX = (width - bgWidth) / 2;
+            const bgY = (height - bgHeight) / 2;
+            
+            // Draw the background
+            image(gridImg, bgX, bgY, bgWidth, bgHeight);
+            
+            // Update bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].draw();
+                
+                // Remove finished bullets
+                if (bullets[i].isFinished()) {
+                    bullets.splice(i, 1);
+                }
+            }
+            
+            // Handle shoot cooldown
+            if (shoot > 0) {
+                shoot += 1;
+            }
+            if (shoot > 3) {
+                shoot = 0;
+            }
+            
+            // Draw character
+            soldier.draw();
+        }
+        
+        function windowResized() {
+            // Resize canvas maintaining aspect ratio
+            let canvasWidth, canvasHeight;
+            
+            if (windowWidth / windowHeight > W_WIDTH / W_HEIGHT) {
+                // Window is wider than the target aspect ratio
+                canvasHeight = windowHeight;
+                canvasWidth = canvasHeight * (W_WIDTH / W_HEIGHT);
+            } else {
+                // Window is taller than the target aspect ratio
+                canvasWidth = windowWidth;
+                canvasHeight = canvasWidth * (W_HEIGHT / W_WIDTH);
+            }
+            
+            resizeCanvas(canvasWidth, canvasHeight);
+            
+            // Reposition sound button
+            if (gameStarted) {
+                // Adjust sound button
+                const soundBtn = document.getElementById('soundButton');
+                soundBtn.style.bottom = '20px';
+            }
+        }
+        
+        // Additional handler to help with iOS audio
+        function touchStarted() {
+            unlockAudio();
+            return false;
+        }
+        
+        // Mouse click handler (for sound activation)
+        function mousePressed() {
+            unlockAudio();
+            return false;
+        }
+    </script>
+</body>
+</html>
