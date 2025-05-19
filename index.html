@@ -273,8 +273,8 @@
                 beginShape();
                 // Create points around a circle to form an ellipse
                 for (let angle = 0; angle < TWO_PI; angle += 0.1) {
-                    const px = x + cos(angle) * radius;
-                    const py = y + sin(angle) * radius;
+                    const px = x + cos(angle) * radiusX;
+                    const py = y + sin(angle) * radiusY;
                     vertex(px, py);
             }
             endShape(CLOSE); // Close the shape
