@@ -267,15 +267,18 @@
             }
             // Method to draw an Ellipse
             drawEllipse(x, y, radius) {
+                const radiusX = radius * 1.5; // Make it wider
+                const radiusY = radius * 0.8; // Make it shorter
+                
                 beginShape();
-                // Four corners of a square
-                vertex(x - radius, y - radius); // Top-left
-                vertex(x + radius, y - radius); // Top-right
-                vertex(x + radius, y + radius); // Bottom-right
-                vertex(x - radius, y + radius); // Bottom-left
-                endShape(CLOSE); // Close the shape
+                // Create points around a circle to form an ellipse
+                for (let angle = 0; angle < TWO_PI; angle += 0.1) {
+                    const px = x + cos(angle) * radius;
+                    const py = y + sin(angle) * radius;
+                    vertex(px, py);
             }
-            
+            endShape(CLOSE); // Close the shape
+            }
             isFinished() {
                 return this.age >= this.lifetime;
             }
