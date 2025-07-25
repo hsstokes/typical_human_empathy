@@ -589,6 +589,17 @@
                     <span>Computational</span>
                 </div>
             </div>
+
+            <div style="display: flex; justify-content: center; margin: 10px 0;">
+                <div style="display: flex; align-items: center; margin-right: 15px;">
+                    <div style="width: 10px; height: 10px; background-color: #3498db; margin-right: 5px;"></div>
+                    <span style="font-size: 11px;">Typical-Human Empathy</span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div style="width: 10px; height: 10px; background-color: #e74c3c; margin-right: 5px;"></div>
+                    <span style="font-size: 11px;">Your Perception</span>
+                </div>
+            </div>
             
             <div class="stats-container">
                 <div class="stat-item" id="uncannyScore">Your Uncanny Rating: 5/10</div>
@@ -1309,10 +1320,10 @@
                     humanPerception.contextual = 0.75; // More decontextualized
                     break;
                 case "intuitive":
-                    humanPerception.intuitive = 0.25; // More intuitive
+                    humanPerception.intuitive = 0.75; // More intuitive (high intuitive value)
                     break;
                 case "computational":
-                    humanPerception.intuitive = 0.75; // More computational
+                    humanPerception.intuitive = 0.25; // More computational (low intuitive value)
                     break;
             }
         }
@@ -1322,12 +1333,12 @@
             document.getElementById('marker-analytical-ai').style.left = `${aiFramework.analytical * 100}%`;
             document.getElementById('marker-temporal-ai').style.left = `${aiFramework.temporal * 100}%`;
             document.getElementById('marker-contextual-ai').style.left = `${aiFramework.contextual * 100}%`;
-            document.getElementById('marker-intuitive-ai').style.left = `${aiFramework.intuitive * 100}%`;
+            document.getElementById('marker-intuitive-ai').style.left = `${(1 - aiFramework.intuitive) * 100}%`;
             
             document.getElementById('marker-analytical-human').style.left = `${humanPerception.analytical * 100}%`;
             document.getElementById('marker-temporal-human').style.left = `${humanPerception.temporal * 100}%`;
             document.getElementById('marker-contextual-human').style.left = `${humanPerception.contextual * 100}%`;
-            document.getElementById('marker-intuitive-human').style.left = `${humanPerception.intuitive * 100}%`;
+            document.getElementById('marker-intuitive-human').style.left = `${(1 - humanPerception.intuitive) * 100}%`;
             
             // Calculate dimensional gap (simple average of differences)
             const dimensionalDiff = (
